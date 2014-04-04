@@ -21,16 +21,18 @@ end
 #web page doers*********************************************************************************************
 def parse_a_page(html_path)
 page = Nokogiri::HTML(open(html_path))
-# puts page
  page
 end
 
 
 def open_a_page(page)
-# brows = Watir::Browser.new
-# puts "\t\t\topening...."
-# brows.goto page
-`start #{page}`
+	begin
+	browser = Watir::Browser.new
+	browser.goto page
+	#`start #{page}`
+	rescue "well try this again"
+		open_a_page(page)
+	end
 end
 
 def search_freetv(name)
@@ -41,11 +43,7 @@ puts "getting...... #{name}.....yah!"
 		else
 			term = name
 		end
-		#http://www.free-tv-video-online.me/internet/game_of_thrones/
 		search = "http://www.free-tv-video-online.me/internet/#{term}/"
-		# p "in search free"
-		# p search
-		# p "out serch free"
 		search
 end
 
@@ -54,22 +52,14 @@ end
 def parse_with(page,select)
 	parsed_page = ''
 	
-	#puts page
 	case select
-		when 1 #
+		when 1 
 			parsed_page = page.css("iframe#hmovie")[0]["src"]
 		when 2
-			#gets the plot
-			
 			parsed_page = page.css("div#plot").text
-			
-		
 		when 3
-			# gets the seasons
 			parsed_page = page.css('td')
-
 		when 4
-			
 			parsed_page = page.css('td[class="mnllinklist dotted"]')
 		when 5
 		
@@ -87,7 +77,7 @@ def what_show_to_watch
 	space(15)
 	puts "\t\twhat show would you like to watch?"
 	space(1)
-	puts "\t\t\tor choose from a list type \'cho\'"
+	#puts "\t\t\tor choose from a list type \'cho\'"
 	space('std2')
 	show_doer
 	
@@ -105,24 +95,74 @@ def see_all_questions(*show_name)
 end
 def see_all_seasons(show_object)
 	space(16)
-	puts "\t___ #{show_object.show_name.keys*''} _____________\n\n"
-	seas = show_object.seasons
-				i = 1
-					seas.each do |key, value|
-						choice_ask(key,i)
-						i += 1
-					end
-	space("std2")
+	seas = show_object.seasons.map{|key,val| key}
+	o = 0
+	i = 1
+	until seas.length == o
+		space(3)
+		puts "\t___ #{show_object.show_name.keys*''} _____________\n\n"
+			seas[o..o+6].each do |key|		
+				choice_ask(key,i)
+				i += 1
+			end
+		 
+		puts "\n\tpage #{page_count(o,6)} of #{total_pages(seas.length,6)} hit 'enter' for next page"
+		space(3)
+		puts "\t>> 'st' to go back"
+		choice = gets.chomp
+
+		break if choice != "" || o+6 >= seas.length || choice == 'st'
+		o += 6 
+		i -= 1
+	end
+	choice
+end
+
+def go_back_a_screen
+	
+end
+def total_pages(total_pages, devide_by)
+	page_count  = 0
+	if (total_pages % devide_by) == 0
+		page_count = total_pages/devide_by 
+	else
+		page_count = (total_pages/devide_by) +1
+	end
+	page_count
+end
+
+def page_count(count, devide_by)
+	page_number = 1
+	page_number = (count/devide_by) + 1 if count != 0
+	page_number = 1 if count == 0
+
+	page_number
 end
 def see_all_episodes(season,show_object)
-	space(10)
-	puts "\t#{show_object.show_name.keys*''}\n\n"
-	puts "\t\t___ #{season} _____________\n\n"
-	show_object.episodes[season].each_key do |key|
+	
+	all_keys = show_object.episodes[season].map{|key,val| key}
+	
+	i = 0
+	until all_keys.length == i
+		space(10)
+		puts "\t#{show_object.show_name.keys*''}\n\n"
+		puts "\t_____ #{season} _____________\n\n"
+		all_keys[i..i+10].each do |key|
+		
+			puts "\t#{key}       -type #{key.to_s[-4..-1].gsub(/\D/,'')}"
+		
+		end
+		puts "\n\tpage #{page_count(i,10)} of #{total_pages(all_keys.length,10)} hit 'enter' for next page"
+		space(5)
+		puts "\t>> 'b' for the main screen"
+		choice = gets.chomp
+		p choice.inspect
+		break if choice != "" || i+10 >= all_keys.length || choice == "st"
 
-		puts "\t\t#{key}        -type #{key.to_s[-4..-1].gsub(/\D/,'')}"
+		i += 10
+		
 	end
-	space("std1")
+	choice
 end
 
 def see_all_ep_links(season, episode, show_object)
@@ -130,17 +170,17 @@ def see_all_ep_links(season, episode, show_object)
 	puts "\t#{show_object.show_name.keys*''}\n\n"
 
 	puts "\t\t___ #{season} _____________\n\n"
-
 		speed = link_speed_chooser
+	if speed == ''
+	else
 	i = 0
 	show_object.episodes[season][episode].each_key do |key|
-		#puts key 
-		puts "\t\t#{key}        -type #{i}" if key.include?(speed)
+		puts "\t#{key}       -type #{i}" if key.include?(speed)
 		i += 1
-		#gets
 	end
-	#puts "in see all ep out of loop"
-	space("std1")
+
+	space("std1")\
+	end
 	
 end
 
@@ -158,6 +198,10 @@ def link_speed_chooser
 		speed = "Average"
 	when 's'
 		speed = "Slow"
+	when ''
+		speed = ''
+	else
+		link_speed_chooser
 	end
 	speed
 end
@@ -193,9 +237,10 @@ def main_chooser(show_object)
 			new_one = 1
 		when "se"
 			go_back = ''
-			until go_back == 'st' || go_back == 'b' || go_back == nil
-				see_all_seasons(show_object)
-				go_back = season_getter(show_object)
+			until go_back == 'st' || go_back == 'b' 
+				sea_choice = see_all_seasons(show_object)
+				puts "in main chooser"
+				go_back = season_getter(show_object, sea_choice)
 			end
 
 		when "pl"
@@ -221,45 +266,40 @@ def processor(the_show_name)
 end
 
 
-def season_getter(show_object)
+def season_getter(show_object, sea_choice)
 	go_back = ''
 	
 	until go_back == 'b'
 		
-		choice = gets.chomp
+		choice = sea_choice
 		if choice.to_i <= show_object.seasons.keys.count
-			break if choice == 'b' || choice == nil || choice == 'st'
+			break if choice == 'b' || choice == '' || choice == 'st'
 			get_choice = "season_#{choice}"
 			episodes = get_episodes(show_object.seasons[get_choice])
 			show_object.episodes[get_choice] = episodes
 
-			see_all_episodes(get_choice,show_object)
+			ep_chioce = see_all_episodes(get_choice,show_object)
+			break if ep_chioce == 'b' || ep_chioce == ""
 			#puts "in season getter"
-			choose_episode_links(get_choice, show_object)	
+			choose_episode_links(get_choice, show_object, ep_chioce)	
 		end
 		
 
 	end
-	go_back = 'st' if choice == 'st'
+	go_back = 'st' if choice == 'st' || choice == ''
 	go_back
 end
 def get_plot(html_path,show_object)
 	html = parse_a_page(html_path)
 	show_object.plot = parse_with(html,2)
-	# puts "in get plot"
-	# p show_object
-	# puts "out plot"
 	show_object	
 end
 
 
-
-#html_path = "http://www.free-tv-video-online.me/internet/game_of_thrones/"
 def get_seasons(html_path,show_object)
 	show_object
 	page = parse_a_page(html_path)
 	td_page =  parse_with(page,3)
-	#puts td_page
 	broken = td_page.to_s.split(" ").uniq
 
 
@@ -277,11 +317,10 @@ def get_seasons(html_path,show_object)
 end
 
 def get_episodes(html_path)
-	#show_object
+
 	page = parse_a_page(html_path)
 	td_page =  parse_with(page,4)
-	episode_links = {}
-	#ep_links = {}	
+	episode_links = {}	
 	current_title = ''
 	broken = td_page.to_s.split("Stream").uniq
 
@@ -305,15 +344,13 @@ def get_episodes(html_path)
 	episode_links
 end
 
-def choose_episode_links(season,show_object)
-	#puts "in choose episode"
+def choose_episode_links(season,show_object,ep_choice)
 	go_back = ''
 	unless go_back == 'b' 
-		choice = gets.chomp
-		#break if choice == 'b' || go_back == nil
-		if choice == nil
+		choice = ep_choice
+		if choice == ''
 		else
-			puts "choose episode links"
+			#puts "choose episode links"
 			epi = ""
 			i = show_object.episodes[season].keys.first[-4..-1].gsub(/\D/,"").to_i
 			show_object.episodes[season].each_key do |key|
@@ -323,9 +360,9 @@ def choose_episode_links(season,show_object)
 			end
 			see_all_ep_links(season, epi, show_object)
 			get_ep_link_link(season, epi, show_object)
-			puts "end of choose ep links"
+			#puts "end of choose ep links"
 		end
-		go_back = 'b' if choice == 'b' 
+		go_back = 'b' if choice == 'b' || choice == ''
 	end
 	go_back
 end
@@ -335,39 +372,43 @@ def get_ep_link_link(season, epi, show_object)
 	get_choice_link = gets.chomp
 	choice_link 	= ''
 	i = 0
-	show_object.episodes[season][epi].each do |key,value|
-		#puts key 
-		if get_choice_link.to_i == i
-			space('std1')
-		
-		puts "\t\t#{key}"
-		puts "\t#{value}"
-		choice_link = value
-		space('std2')
-		#parsed_value = parse_a_page(value)
-		#open_a_page(value)
-		puts "here all"
-		
-		player =  get_iframe(value)
-		open_a_page(player)
-		end    
+	if get_choice_link == ''
+	else
+		show_object.episodes[season][epi].each do |key,value|
+			 
+			if get_choice_link.to_i == i
+				space('std1')
+			
+			puts "\t\t#{key}"
+			puts "\t#{value}"
+			choice_link = value
+			space(3)
+			
+			
+			player =  get_iframe(value)
+			puts "\t#{player}"
+			open_a_page(player)
+			end    
 
-		i += 1
-		#gets
+			i += 1
+			
+		end
 	end
 end
 
 def get_iframe(value)
 	dom = Nokogiri::HTML(open(value))
-	#puts dom
-	iframe_link = dom.css('iframe')[0]["src"]
+	#space(3)
+	choice_ask("launch player","p")
+	choice_ask("view page","v")
+	space(5)
+	choice = gets.chomp
+	iframe_link = value if choice == 'v'
+	iframe_link = dom.css('iframe')[0]["src"] if choice == 'p'
 	iframe_link
 end
-#get_seasons(html_path)
-
 #style elements*******************************************************************************************
 
-	# headings creats consistent heading lengths through each screen
 	def headings(name)
 		head_length_remove = name.to_s.length/2
 		heading = "________________________________   #{name}   ________________________________"
@@ -407,9 +448,3 @@ end
 
 start
 
-
-
-
-#html_path = "http://www.google.com"#{}"http://www.free-tv-video-online.me/player/movshare.php?id=48f93311e51e6"
-
-#open_a_page(html_path)
